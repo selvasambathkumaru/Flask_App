@@ -148,6 +148,7 @@ s3resource1 = boto3.resource('s3', aws_access_key_id=AWScrendtial['accesskey'], 
 def upload_to_aws(local_file, bucket, s3path):
   try:
     s3resource.upload_file(local_file, bucket, s3path)
+    return "True"
   except FileNotFoundError: 
     error_msg = ('Upload to s3 - The file was not found')
     error_log(error_msg)  
@@ -162,21 +163,25 @@ def save_to_json_and_upload_to_s3():
   try:
     all_products = Product.query.all()
     result = products_schema.dump(all_products)
-    
+
+    local_json_file = "D:\\Python_Topics\\Flask\\POC\\API_Health_Check\\sample.json" 
     for item in result:
       output = json.dumps(item)
-
-      local_json_file = "D:\\Python_Topics\\Flask\\POC\\API_Health_Check\\sample.json"  
+       
       with open(local_json_file, "a+") as outfile:
         outfile.write(output)
         outfile.close()
       
-      s3path= AWScrendtial['s3path']+ "sample.json"
-      bucket = AWScrendtial['s3bucketname']
-      uploaded = upload_to_aws(local_json_file, bucket, s3path)
-      if uploaded == True:
-        os.remove(local_json_file)
-      return ("Json File created and uploaded to s3 bucket successfully")
+    s3path= AWScrendtial['s3path']+ "sample.json"
+    bucket = AWScrendtial['s3bucketname']
+    uploaded = upload_to_aws(local_json_file, bucket, s3path)
+    
+    if uploaded == 'True':
+      os.remove(local_json_file)
+    else:
+      error_msg = ('Could not delete the Json file')
+      error_log(error_msg) 
+    return ("Json File created and uploaded to s3 bucket successfully")
   except Exception as e: 
     error_msg = ('Error log in Saving Json', e)
     error_log(error_msg) 
@@ -186,11 +191,11 @@ s3path= AWScrendtial['s3errorlogpath']+ "Error_Log.txt"
 bucket = AWScrendtial['s3bucketname']
 if file_exists == True:
   uploaded = upload_to_aws(local_error_log_file, bucket, s3path)
-  if uploaded == True:
+  if uploaded == 'True':
         os.remove(local_error_log_file)
-else:
-  error_msg = ('Could not delete a local Json file')
-  error_log(error_msg) 
+  else:
+    error_msg = ('Could not delete the Error_Log file')
+    error_log(error_msg) 
 
 # Run Server
 if __name__ == '__main__':
