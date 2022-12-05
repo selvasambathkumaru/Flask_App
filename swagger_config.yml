@@ -1,0 +1,30 @@
+summary: "All Products"
+description: "This is a simple API which returns the Product Details"
+consumes:
+- "application/json"
+produces:
+- "application/json"
+parameters:
+- in: "body"
+  name: "body"
+  description: "Accepts a input dictionary of inputs of Product Details For the CRUD Operation"
+  required: true
+  schema:
+    type: "object"
+    properties:
+      name:
+        type: "string"  
+
+      description:
+        type: "string"
+        
+      price:
+        type: "integer"
+        format: "int64"
+
+      qty:
+        type: "integer"
+        format: "int64"
+responses:
+  405:
+    description: "Invalid input"
