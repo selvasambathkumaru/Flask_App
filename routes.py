@@ -1,3 +1,4 @@
+"""Modules"""
 import os
 import os.path
 import datetime
@@ -52,13 +53,16 @@ users = {
 
 @auth.verify_password
 def verify_password(username, password):
+    """Verify Username and Password"""
     if username in users and check_password_hash(users.get(username), password):
         return username
+    return None
 
 
 ############ Basic Authentication ############
 
 ########### SWAGGER Documentation ###########
+
 app.config["SWAGGER"] = {"title": "Flask Swagger-UI", "uiversion": 2}
 
 swagger_config = {
@@ -85,12 +89,6 @@ swagger = Swagger(app, config=swagger_config, template=template)
 
 ########### SWAGGER Documentation ###########
 # pylint: disable=C0103
-#pylint: disable=C0114
-# Product Schema
-class ProductSchema(ma.Schema):
-    class Meta:
-        fields = ("id", "name", "description", "price", "qty")
-
 
 # Init schema
 product_schema = ProductSchema()
@@ -98,7 +96,8 @@ products_schema = ProductSchema(many=True)
 
 
 def error_log(*error_message):
-    with open(local_error_log_file, "a+") as outfile:
+    """Creating Error Log File"""
+    with open(local_error_log_file, "a+", encoding="utf-8") as outfile:
         outfile.write(*error_message)
         outfile.close()
 
@@ -108,6 +107,7 @@ def error_log(*error_message):
 @swag_from("swagger_config.yml")
 @auth.login_required
 def add_product():
+    """Adding a product"""
     try:
         name = request.json["name"]
         description = request.json["description"]
@@ -121,6 +121,7 @@ def add_product():
         error_msg = ("Error log in POST Method", exception)
         error_log(str(error_msg))
         return exception
+    return None
 
 
 # Get All Products
@@ -128,6 +129,7 @@ def add_product():
 @swag_from("swagger_config.yml")
 @auth.login_required
 def get_products():
+    """Get all product"""
     try:
         all_products = Product.query.all()
         result = products_schema.dump(all_products)
@@ -136,29 +138,33 @@ def get_products():
         error_msg = ("Error log in GET Method", exception)
         error_log(str(error_msg))
         return exception
+    return None
 
 
 # Get Single Products
-@app.route("/product/<id>", methods=["GET"])
+@app.route("/product/<get_id>", methods=["GET"])
 @swag_from("swagger_config.yml")
 @auth.login_required
-def get_product(id):
+def get_single_product(get_id):
+    """Get Id wise product"""
     try:
-        product = Product.query.get(id)
+        product = Product.query.get(get_id)
         return product_schema.jsonify(product)
     except Exception as exception:
         error_msg = ("Error log in GET Method", exception)
         error_log(str(error_msg))
         return exception
+    return None
 
 
 # Update a Product
-@app.route("/product/<id>", methods=["PUT"])
+@app.route("/product/<update_id>", methods=["PUT"])
 @swag_from("swagger_config.yml")
 @auth.login_required
-def update_product(id):
+def update_product(update_id):
+    """Update a product"""
     try:
-        product = Product.query.get(id)
+        product = Product.query.get(update_id)
         name = request.json["name"]
         description = request.json["description"]
         price = request.json["price"]
@@ -170,29 +176,34 @@ def update_product(id):
         product.qty = qty
         db.session.commit()
         return product_schema.jsonify(product)
+
     except Exception as exception:
         error_msg = ("Error log in PUT Method", exception)
         error_log(str(error_msg))
         return exception
+    return None
 
 
 # Delete Product
-@app.route("/product/<id>", methods=["DELETE"])
+@app.route("/product/<delete_id>", methods=["DELETE"])
 @swag_from("swagger_config.yml")
 @auth.login_required
-def delete_product(id):
+def delete_product(delete_id):
+    """Delete a product"""
     try:
-        product = Product.query.get(id)
-        db.session.delete(product)
+        product = Product.query.get(delete_id)
+        product.query.filter(product.id == delete_id).delete()
         db.session.commit()
-        return product_schema.jsonify(product)
+        return "deleted the product successfully"
     except Exception as exception:
         error_msg = ("Error log in DELETE Method", exception)
         error_log(str(error_msg))
-        return exception
+        return "could not delete the product"
+    return None
 
 
 def upload_to_aws(local_file, bucket, s3path):
+    """upload a file to s3 location"""
     try:
         s3resource.upload_file(local_file, bucket, s3path)
         return True
@@ -204,12 +215,14 @@ def upload_to_aws(local_file, bucket, s3path):
         error_msg = "Upload to s3 Bucket- Credentials not available"
         error_log(str(error_msg))
         return False
+    return None
 
 
 @app.route("/save_to_json", methods=["GET"])
 @swag_from("swagger_config.yml")
 @auth.login_required
 def save_to_json_and_upload_to_s3():
+    """save_to_json_and_upload_to_s3"""
     try:
         all_products = Product.query.all()
         result = products_schema.dump(all_products)
@@ -217,15 +230,17 @@ def save_to_json_and_upload_to_s3():
         for item in result:
             output = json.dumps(item)
 
-            with open(local_json_file, "a+") as outfile:
-                outfile.write(output)
-                outfile.close()
+            with open(local_json_file, "a+", encoding="utf-8") as file:
+                file.write(output)
+                file.close()
 
         current_time = datetime.datetime.now()
-        s3path = AWScrendtial["s3path"] + "products_" + str(current_time) + "." + "json"
+        s3_path = (
+            AWScrendtial["s3path"] + "products_" + str(current_time) + "." + "json"
+        )
 
-        bucket = AWScrendtial["s3bucketname"]
-        uploaded_json = upload_to_aws(local_json_file, bucket, s3path)
+        s3_bucket_name = AWScrendtial["s3bucketname"]
+        uploaded_json = upload_to_aws(local_json_file, s3_bucket_name, s3_path)
 
         if uploaded_json is True:
             os.remove(local_json_file)
@@ -237,16 +252,19 @@ def save_to_json_and_upload_to_s3():
         error_msg = ("Error log in Saving Json", exception)
         error_log(str(error_msg))
         return exception
+    return None
 
 
 file_exists = os.path.exists(local_error_log_file)
 
 current_time_now = datetime.datetime.now()
-s3path = AWScrendtial["s3errorlogpath"] + "Error_Log_" + str(current_time_now) + ".txt"
-bucket = AWScrendtial["s3bucketname"]
+s3_path_text = (
+    AWScrendtial["s3errorlogpath"] + "Error_Log_" + str(current_time_now) + ".txt"
+)
+bucket_name = AWScrendtial["s3bucketname"]
 
 if file_exists is True:
-    uploaded_text = upload_to_aws(local_error_log_file, bucket, s3path)
+    uploaded_text = upload_to_aws(local_error_log_file, bucket_name, s3_path_text)
     if uploaded_text is True:
         os.remove(local_error_log_file)
     else:
@@ -256,7 +274,7 @@ if file_exists is True:
 health = HealthCheck()
 health.add_check(add_product)
 health.add_check(get_products)
-health.add_check(get_product)
+health.add_check(get_single_product)
 health.add_check(update_product)
 health.add_check(delete_product)
 health.add_check(upload_to_aws)
